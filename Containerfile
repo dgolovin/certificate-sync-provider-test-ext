@@ -37,7 +37,7 @@ RUN mkdir -p /extension/dist && \
     node -e "const p=require('./package.json'); delete p.scripts; delete p.devDependencies; console.log(JSON.stringify(p,null,2))" > /extension/package.json
 
 # Final stage - minimal image with just the extension files
-FROM scratch
+FROM alpine:3.20 AS final
 
 LABEL org.opencontainers.image.title="Certificate Sync Provider Test" \
       org.opencontainers.image.description="Test extension to verify certificate sync trust model for external extensions" \
