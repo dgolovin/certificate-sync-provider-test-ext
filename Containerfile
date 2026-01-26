@@ -27,7 +27,14 @@ RUN npm ci
 # Copy source and build
 COPY tsconfig.json vite.config.js ./
 COPY src/ ./src/
+COPY icon.png ./
 RUN npm run build
+
+# Prepare extension directory with only required files
+RUN mkdir -p /extension/dist && \
+    cp dist/extension.cjs /extension/dist/ && \
+    cp icon.png /extension/ && \
+    node -e "const p=require('./package.json'); delete p.scripts; delete p.devDependencies; console.log(JSON.stringify(p,null,2))" > /extension/package.json
 
 # Final stage - minimal image with just the extension files
 FROM scratch
@@ -37,6 +44,4 @@ LABEL org.opencontainers.image.title="Certificate Sync Provider Test" \
       org.opencontainers.image.vendor="Test" \
       io.podman-desktop.api.version=">= 1.10.0"
 
-COPY --from=builder /build/dist/extension.cjs /extension/dist/extension.cjs
-COPY package.json /extension/
-COPY icon.png /extension/
+COPY --from=builder /extension /extension
