@@ -26,34 +26,24 @@ import * as extensionApi from '@podman-desktop/api';
 /**
  * Test Certificate Sync Provider
  *
- * This provider registers certificate sync targets that would normally be enabled.
- * When loaded as an external/user-installed extension, the trust model should
- * force these targets to be disabled with the reason:
- * "Extension not authorized for certificate sync"
+ * This provider registers certificate sync targets.
+ * When loaded as an external/user-installed extension, these targets
+ * should NOT appear in the UI because untrusted extensions are filtered out.
  */
 class TestCertificateSyncProvider implements CertificateSyncTargetProvider {
   /**
    * Get test sync targets.
-   * Returns targets with enabled=true, but the registry will override
-   * this to enabled=false for user-installed extensions.
+   * These targets should only be visible if the extension is trusted (preinstalled).
    */
   async getTargets(): Promise<CertificateSyncTarget[]> {
     return [
       {
         id: 'test-target-1',
-        name: 'Test Target 1 (External)',
-        enabled: true,
+        name: 'Test Target 1',
       },
       {
         id: 'test-target-2',
-        name: 'Test Target 2 (External)',
-        enabled: true,
-      },
-      {
-        id: 'test-target-disabled',
-        name: 'Test Target (Already Disabled)',
-        enabled: false,
-        disabledReason: 'Intentionally disabled by provider',
+        name: 'Test Target 2',
       },
     ];
   }
@@ -98,7 +88,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     '[certificate-sync-provider-test] Registered certificate sync provider "test-external-provider"',
   );
   console.log(
-    '[certificate-sync-provider-test] Targets should appear DISABLED in Certificates Preferences if loaded as external extension',
+    '[certificate-sync-provider-test] Targets should NOT appear in Certificates Preferences if loaded as external extension (untrusted)',
   );
 }
 

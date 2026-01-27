@@ -50,8 +50,6 @@ export type ExtensionContext = {
 export type CertificateSyncTarget = {
   id: string;
   name: string;
-  enabled: boolean;
-  disabledReason?: string;
 };
 
 export type CertificateSyncTargetProvider = {
