@@ -28,7 +28,7 @@ import * as extensionApi from '@podman-desktop/api';
 const SIMULATED_CERT_COUNT = 77;
 
 /** Delay in ms between each simulated certificate upload */
-const UPLOAD_DELAY_MS = 50;
+const UPLOAD_DELAY_MS = 500;
 
 /**
  * Helper to sleep for a given number of milliseconds.
