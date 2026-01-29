@@ -20,8 +20,22 @@ import type {
   CertificateSyncTarget,
   CertificateSyncTargetProvider,
   ExtensionContext,
+  Progress,
 } from '@podman-desktop/api';
 import * as extensionApi from '@podman-desktop/api';
+
+/** Number of simulated certificates to sync */
+const SIMULATED_CERT_COUNT = 77;
+
+/** Delay in ms between each simulated certificate upload */
+const UPLOAD_DELAY_MS = 50;
+
+/**
+ * Helper to sleep for a given number of milliseconds.
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 /**
  * Test Certificate Sync Provider
@@ -50,21 +64,68 @@ class TestCertificateSyncProvider implements CertificateSyncTargetProvider {
 
   /**
    * Synchronize certificates to a target.
-   * This should never be called for external extensions due to trust restrictions.
+   * Simulates syncing 77 certificates with progress reporting.
    */
-  async synchronize(targetId: string, certificates: string[]): Promise<void> {
-    // Log for debugging - this should never be reached for external extensions
+  async synchronize(targetId: string, _certificates: string[]): Promise<void> {
     console.log(
-      `[certificate-sync-provider-test] synchronize called for ${targetId} with ${certificates.length} certificates`,
-    );
-    console.log(
-      '[certificate-sync-provider-test] WARNING: This should not happen for external extensions!',
+      `[certificate-sync-provider-test] synchronize called for ${targetId}`,
     );
 
-    // Simulate what would happen if sync was allowed
-    await extensionApi.window.showInformationMessage(
-      `Test sync to ${targetId}: Would sync ${certificates.length} certificates`,
+    await extensionApi.window.withProgress(
+      {
+        location: extensionApi.ProgressLocation.TASK_WIDGET,
+        title: `Synchronizing certificates to ${targetId}`,
+      },
+      async (progress: Progress<{ message?: string; increment?: number }>) => {
+        await this.doSynchronize(targetId, progress);
+      },
     );
+  }
+
+  /**
+   * Perform the simulated certificate synchronization with progress reporting.
+   * Note: progress.report({ increment }) SETS the progress value, doesn't add to it.
+   */
+  private async doSynchronize(
+    targetId: string,
+    progress: Progress<{ message?: string; increment?: number }>,
+  ): Promise<void> {
+    const totalCerts = SIMULATED_CERT_COUNT;
+    let currentPercent = 0;
+
+    try {
+      // Simulate creating anchors directory (0% -> 5%)
+      currentPercent = 5;
+      progress.report({ message: `Creating anchors directory on ${targetId}`, increment: currentPercent });
+      await sleep(100);
+
+      // Simulate uploading each certificate (5% -> 85%)
+      for (let i = 0; i < totalCerts; i++) {
+        // Update progress at the START of each certificate upload
+        currentPercent = 5 + Math.floor(((i + 1) / totalCerts) * 80);
+        progress.report({
+          message: `(${i + 1}/${totalCerts}) Uploading certificate to ${targetId}`,
+          increment: currentPercent,
+        });
+
+        // Simulate upload delay
+        await sleep(UPLOAD_DELAY_MS);
+      }
+
+      // Simulate updating CA trust store (85% -> 90%)
+      progress.report({ message: `Updating CA trust store on ${targetId}`, increment: 90 });
+      await sleep(200);
+
+      // Simulate restarting services (90% -> 95%)
+      progress.report({ message: `Restarting services on ${targetId}`, increment: 95 });
+      await sleep(200);
+
+      // Complete (100%)
+      progress.report({ message: `Synchronized ${totalCerts} certificates to ${targetId}`, increment: 100 });
+    } finally {
+      // Mark task as complete
+      progress.report({ increment: -1 });
+    }
   }
 }
 

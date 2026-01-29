@@ -28,11 +28,15 @@ export const certificates: {
   onDidChangeCertificates: vi.fn().mockReturnValue({ dispose: vi.fn() }),
 };
 
+const mockProgress = {
+  report: vi.fn(),
+};
+
 export const window = {
   showInformationMessage: vi.fn(),
   showWarningMessage: vi.fn(),
   showErrorMessage: vi.fn(),
-  withProgress: vi.fn().mockImplementation(async (_options: unknown, task: () => Promise<unknown>) => task()),
+  withProgress: vi.fn().mockImplementation(async (_options: unknown, task: (progress: typeof mockProgress) => Promise<unknown>) => task(mockProgress)),
 };
 
 export const commands = {
@@ -55,4 +59,8 @@ export type CertificateSyncTarget = {
 export type CertificateSyncTargetProvider = {
   getTargets(): Promise<CertificateSyncTarget[]>;
   synchronize(targetId: string, certificates: string[]): Promise<void>;
+};
+
+export type Progress<T> = {
+  report(value: T): void;
 };
