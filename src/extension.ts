@@ -52,12 +52,12 @@ class TestCertificateSyncProvider implements CertificateSyncTargetProvider {
   async getTargets(): Promise<CertificateSyncTarget[]> {
     return [
       {
-        id: 'test-target-1',
-        name: 'Test Target 1',
+        id: 'test-target-success',
+        name: 'Test Target Success',
       },
       {
-        id: 'test-target-2',
-        name: 'Test Target 2',
+        id: 'test-target-fail',
+        name: 'Test Target Fail',
       },
     ];
   }
@@ -91,6 +91,8 @@ class TestCertificateSyncProvider implements CertificateSyncTargetProvider {
     progress: Progress<{ message?: string; increment?: number }>,
   ): Promise<void> {
     const totalCerts = SIMULATED_CERT_COUNT;
+    const shouldFail = targetId === 'test-target-fail';
+    const failAtCert = Math.floor(totalCerts / 2); // Fail at 50%
     let currentPercent = 0;
 
     try {
@@ -110,6 +112,11 @@ class TestCertificateSyncProvider implements CertificateSyncTargetProvider {
 
         // Simulate upload delay
         await sleep(UPLOAD_DELAY_MS);
+
+        // Throw error at 50% for the fail target
+        if (shouldFail && i === failAtCert) {
+          throw new Error(`Simulated failure: Connection to ${targetId} lost while uploading certificate ${i + 1}`);
+        }
       }
 
       // Simulate updating CA trust store (85% -> 90%)
