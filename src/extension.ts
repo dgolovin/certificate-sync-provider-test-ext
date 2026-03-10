@@ -18,6 +18,7 @@
 import type {
   CertificateSyncTarget,
   CertificateSyncTargetProvider,
+  Event,
   ExtensionContext,
   Progress,
 } from '@podman-desktop/api';
@@ -44,12 +45,28 @@ function sleep(ms: number): Promise<void> {
  * should NOT appear in the UI because untrusted extensions are filtered out.
  */
 class TestCertificateSyncProvider implements CertificateSyncTargetProvider {
+  private readonly _onDidChangeTargets = new extensionApi.EventEmitter<void>();
+  readonly onDidChangeTargets: Event<void> = this._onDidChangeTargets.event;
+
+  // Blinking target state - toggles every 5 seconds
+  private showBlinkingTarget = true;
+  private blinkIntervalId: ReturnType<typeof setInterval> | undefined;
+
+  constructor() {
+    // Toggle the blinking target visibility every 5 seconds
+    this.blinkIntervalId = setInterval(() => {
+      this.showBlinkingTarget = !this.showBlinkingTarget;
+      console.log(`[certificate-sync-provider-test] Blinking target is now ${this.showBlinkingTarget ? 'VISIBLE' : 'HIDDEN'}`);
+      this._onDidChangeTargets.fire();
+    }, 5000);
+  }
+
   /**
    * Get test sync targets.
    * These targets should only be visible if the extension is trusted (preinstalled).
    */
   async getTargets(): Promise<CertificateSyncTarget[]> {
-    return [
+    const targets: CertificateSyncTarget[] = [
       {
         id: 'test-target-success',
         name: 'Test Target Success',
@@ -59,6 +76,27 @@ class TestCertificateSyncProvider implements CertificateSyncTargetProvider {
         name: 'Test Target Fail',
       },
     ];
+
+    // Add the blinking target if currently visible
+    if (this.showBlinkingTarget) {
+      targets.push({
+        id: 'test-target-blinking',
+        name: 'Test Target Blinking',
+      });
+    }
+
+    return targets;
+  }
+
+  /**
+   * Clean up resources.
+   */
+  dispose(): void {
+    if (this.blinkIntervalId) {
+      clearInterval(this.blinkIntervalId);
+      this.blinkIntervalId = undefined;
+    }
+    this._onDidChangeTargets.dispose();
   }
 
   /**
@@ -144,18 +182,20 @@ export async function activate(context: ExtensionContext): Promise<void> {
   const provider = new TestCertificateSyncProvider();
 
   // Register the certificate sync target provider
-  const registration = extensionApi.certificates.registerSyncTargetProvider(
-    'test-external-provider',
-    provider,
-  );
+  const registration = extensionApi.certificates.registerSyncTargetProvider(provider);
 
+  // Clean up both the registration and the provider's interval timer
   context.subscriptions.push(registration);
+  context.subscriptions.push({ dispose: () => provider.dispose() });
 
   console.log(
     '[certificate-sync-provider-test] Registered certificate sync provider "test-external-provider"',
   );
   console.log(
     '[certificate-sync-provider-test] Targets should NOT appear in Certificates Preferences if loaded as external extension (untrusted)',
+  );
+  console.log(
+    '[certificate-sync-provider-test] "Test Target Blinking" will toggle visibility every 5 seconds',
   );
 }
 
